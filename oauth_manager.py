@@ -1,11 +1,9 @@
 import os
-import json
 from pathlib import Path
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from typing import Optional
-
 import config_manager
 
 # -------------------------------------------------------
@@ -20,8 +18,8 @@ SCOPES = [
     "openid",
 ]
 
-# 🔥 MUST MATCH GCP CONSOLE
-APP_BASE_URL = "https://horizon.prefect.io"
+# 🔥 THIS MUST MATCH YOUR DEPLOYED MCP DOMAIN
+APP_BASE_URL = "https://email-copilot-mcp-server.fastmcp.app"
 REDIRECT_URI = f"{APP_BASE_URL}/oauth/callback"
 
 
@@ -33,12 +31,9 @@ def ensure_config_dir():
 
 
 def _build_flow() -> Flow:
-    """Builds OAuth Flow object for cloud deployment."""
     sys_config = config_manager.load_system_config()
     if not sys_config:
-        raise ValueError(
-            "Application not configured. Run 'configure_mcp_app' first."
-        )
+        raise ValueError("Run configure_mcp_app first.")
 
     client_config = {
         "web": {
@@ -60,7 +55,6 @@ def _build_flow() -> Flow:
 # STEP 1 → LOGIN URL
 # -------------------------------------------------------
 def get_authorization_url() -> str:
-    """Generate Google OAuth login URL."""
     flow = _build_flow()
 
     auth_url, _ = flow.authorization_url(
@@ -73,19 +67,15 @@ def get_authorization_url() -> str:
 
 
 # -------------------------------------------------------
-# STEP 2 → GOOGLE CALLBACK HITS MCP SERVER
+# STEP 2 → GOOGLE CALLBACK
 # -------------------------------------------------------
 def authorize_with_code(code: str) -> None:
-    """Exchange auth code for access + refresh tokens."""
     flow = _build_flow()
-
     flow.fetch_token(code=code)
 
     credentials = flow.credentials
-
     save_credentials(credentials)
 
-    # Persist logged-in email
     if credentials.id_token and "email" in credentials.id_token:
         config_manager.update_config_field(
             "EMAIL_USER",
@@ -98,7 +88,6 @@ def authorize_with_code(code: str) -> None:
 # -------------------------------------------------------
 def save_credentials(credentials: Credentials):
     ensure_config_dir()
-
     with open(TOKEN_FILE, "w") as f:
         f.write(credentials.to_json())
 
