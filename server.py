@@ -62,5 +62,9 @@ async def terms():
     return HTMLResponse("<h2>Email Copilot MCP Terms</h2>")
 
 # MCP PROTECTED ROUTES
-mcp_app = mcp.http_app(path="/mcp")
+mcp_app = mcp.http_app(
+    path="/mcp",
+    stateless_http=True
+)
+
 app.mount("/mcp", mcp_app)
